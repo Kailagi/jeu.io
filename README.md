@@ -117,10 +117,10 @@ L'ensemble de l'esthétique pastel et poudrée du jeu est gouvernée par des var
 
 L'interface entourant le canvas du jeu a été découpée et instanciée de manière granulaire :
 
-1. **Atoms :** Éléments graphiques élémentaires (ex: le bouton interactif [Button.ts](file:///Users/kailagi/jeu.io/client/src/ui/atoms/Button.ts), le champ de saisie pseudo [Input.ts](file:///Users/kailagi/jeu.io/client/src/ui/atoms/Input.ts), la ligne du tableau des scores [LeaderboardRow.ts](file:///Users/kailagi/jeu.io/client/src/ui/atoms/LeaderboardRow.ts), et la jauge de points [ScoreHUD.ts](file:///Users/kailagi/jeu.io/client/src/ui/atoms/ScoreHUD.ts)).
-2. **Molecules :** Combinaison d'atomes formant des composants fonctionnels (ex: le formulaire de connexion [LoginForm.ts](file:///Users/kailagi/jeu.io/client/src/ui/molecules/LoginForm.ts)).
-3. **Organisms :** Composants autonomes complexes (ex: la carte de menu [MenuCard.ts](file:///Users/kailagi/jeu.io/client/src/ui/organisms/MenuCard.ts) et le classement général temps réel [Leaderboard.ts](file:///Users/kailagi/jeu.io/client/src/ui/organisms/Leaderboard.ts)).
-4. **Templates :** Squelettes de pages organisant la disposition globale (ex: [HomeTemplate.ts](file:///Users/kailagi/jeu.io/client/src/ui/templates/HomeTemplate.ts)).
+1. **Atoms :** Éléments graphiques élémentaires (ex: le bouton interactif [Button.ts](./client/client/src/ui/atoms/Button.ts), le champ de saisie pseudo [Input.ts](./client/src/ui/atoms/Input.ts), la ligne du tableau des scores [LeaderboardRow.ts](./client/src/ui/atoms/LeaderboardRow.ts), et la jauge de points [ScoreHUD.ts](./client/src/ui/atoms/ScoreHUD.ts)).
+2. **Molecules :** Combinaison d'atomes formant des composants fonctionnels (ex: le formulaire de connexion [LoginForm.ts](./client/src/ui/molecules/LoginForm.ts)).
+3. **Organisms :** Composants autonomes complexes (ex: la carte de menu [MenuCard.ts](./client/src/ui/organisms/MenuCard.ts) et le classement général temps réel [Leaderboard.ts](./client/src/ui/organisms/Leaderboard.ts)).
+4. **Templates :** Squelettes de pages organisant la disposition globale (ex: [HomeTemplate.ts](./client/src/ui/templates/HomeTemplate.ts)).
 
 ### C. Clean Code (SRP, DRY, KISS)
 
@@ -168,7 +168,7 @@ Voici les trois "Master Prompts" stratégiques rédigés pour guider les agents 
 > **Tâche :** Refactorise entièrement l'architecture réseau vers un modèle d'arbitrage autoritaire centralisé à 60 FPS côté serveur.
 > **Contraintes Strictes :**
 >
-> 1. Le client n'envoie au serveur _que_ sa direction (position X et Y de la souris) via le message `PLAYER_UPDATE`.
+> 1. Le client n'envoie au serveur que sa direction (position X et Y de la souris) via le message `PLAYER_UPDATE`.
 > 2. Le serveur héberge une boucle physique synchrone à 60 FPS (`setInterval` à 16.6ms) qui déplace les joueurs, calcule les collisions de bousculade (en appliquant une force de recul immédiate lors des chocs) et gère la friction aux frontières de l'arène.
 > 3. Le serveur diffuse l'état complet du jeu (`GAME_STATE`) à intervalle régulier de 30ms (environ 33Hz) aux clients pour affichage passif.
 
@@ -219,7 +219,7 @@ graph TD
 2. **Les Symptômes de Dysfonctionnement :**
    - **Bousculades Élastiques :** Lorsque deux joueurs entraient en collision, les deux clients effectuaient des calculs de poussée concurrents. Cela entraînait d'insupportables secousses physiques élastiques ("rubber-banding"), les coordonnées se contredisant d'une frame réseau à l'autre.
    - **Immunité aux Nuages de Dégâts :** Le client décidait unilatéralement s'il entrait en collision ou non avec un nuage de dégâts. Un client modifié pouvait simplement désactiver la collision locale et devenir immunisé aux dégâts uniques de -50 points.
-3. **La Reprise de Contrôle Humaine :** L'humain a dû interrompre la génération de l'agent et lui imposer un refactoring structurel complet. L'humain a dicté les étapes pour centraliser l'intégralité du calcul physique au sein de la classe [GameRoom.ts](file:///Users/kailagi/jeu.io/server/src/room/GameRoom.ts) s'exécutant à 60 FPS sur le serveur. Désormais, le client n'est qu'un afficheur passif, supprimant définitivement le rubber-banding physique et sécurisant le gameplay.
+3. **La Reprise de Contrôle Humaine :** L'humain a dû interrompre la génération de l'agent et lui imposer un refactoring structurel complet. L'humain a dicté les étapes pour centraliser l'intégralité du calcul physique au sein de la classe [GameRoom.ts](file:/jeu.io/server/src/room/GameRoom.ts) s'exécutant à 60 FPS sur le serveur. Désormais, le client n'est qu'un afficheur passif, supprimant définitivement le rubber-banding physique et sécurisant le gameplay.
 
 ### C. Hallucinations Additionnelles & Code Spaghetti
 
