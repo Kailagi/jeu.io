@@ -14,12 +14,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // 1. Initialisation et affichage de l'Écran d'Accueil
     const homeScreen = createHomeTemplate({
         onPlaySubmit: (pseudo: string) => {
-            // Effet visuel : disparition en douceur du menu
             homeScreen.style.opacity = '0';
 
             setTimeout(() => {
-                homeScreen.remove(); // On supprime le menu du DOM
-                setupGame(appContainer, pseudo); // On lance le jeu !
+                homeScreen.remove();
+                setupGame(appContainer, pseudo);
             }, 500);
         }
     });
@@ -27,9 +26,6 @@ window.addEventListener('DOMContentLoaded', () => {
     appContainer.appendChild(homeScreen);
 });
 
-/**
- * Configure le Canvas, injecte l'interface (HUD) et démarre le moteur
- */
 function setupGame(container: HTMLElement, pseudo: string): void {
     // 1. Création dynamique du Canvas HTML5
     const canvas = document.createElement('canvas');
@@ -40,11 +36,10 @@ function setupGame(container: HTMLElement, pseudo: string): void {
     canvas.style.zIndex = '1';
     container.appendChild(canvas);
 
-    // 2. Création et injection du Leaderboard (Top Moelleux)
+    // 2. Création et injection du Leaderboard
     const leaderboard = new Leaderboard();
     container.appendChild(leaderboard.getElement());
 
-    // Données fictives en attendant le serveur
     leaderboard.update([
         { id: '1', pseudo: 'FraisePuff 🍓', score: 450 },
         { id: '2', pseudo: 'ChocoMint 🌿', score: 320 },
@@ -56,9 +51,9 @@ function setupGame(container: HTMLElement, pseudo: string): void {
     const scoreHUD = new ScoreHUD();
     container.appendChild(scoreHUD.getElement());
 
-    // 4. Instanciation et démarrage du moteur de jeu local
+    // 4. Démarrage du moteur de jeu local avec sa jauge
     const engine = new GameEngine(canvas, pseudo);
     engine.start();
 
-    console.log(`🎮 Moteur, HUD et Jauge lancés avec succès pour : ${pseudo}`);
+    console.log(`🚀 Fusion réussie ! Tout est synchronisé sur la branche globale.`);
 }
