@@ -1,0 +1,20 @@
+{
+    "name": "pastel-puff-server",
+    "version": "1.0.0",
+    "description": "Backend temps réel pour PastelPuff.io",
+    "main": "dist/server.js",
+    "scripts": {
+        "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+        "build": "tsc",
+        "start": "node dist/server.js"
+    },
+    "dependencies": {
+        "ws": "^8.18.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0",
+        "@types/ws": "^8.5.10",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.3.3"
+    }
+}
