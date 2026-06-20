@@ -10,7 +10,7 @@ interface NetworkPlayer {
     color: string;
     mouseX: number;
     mouseY: number;
-    hitCooldowns: string[]; // Sécurité pour ne pas vider les points en boucle
+    hitCooldowns: string[]; // Empêche les dégâts en boucle sur une seule frame
 }
 
 interface ServerCloud {
@@ -28,12 +28,13 @@ export class GameRoom {
     private connections: Map<string, WebSocket> = new Map();
     private clouds: ServerCloud[] = [];
 
+    // Configuration de l'arène de jeu
     private arenaX = 500;
     private arenaY = 500;
     private arenaRadius = 380;
 
     constructor() {
-        console.log('🕹️ Moteur Agar.io avec règles PastelPuff.');
+        console.log('🕹️ Moteur Agar.io avec règles PastelPuff actif et synchronisé.');
         this.startServerPhysicsLoop();
     }
 
@@ -43,7 +44,16 @@ export class GameRoom {
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
         const newPlayer: NetworkPlayer = {
-            id, pseudo, x: 500, y: 500, radius: 25, score: 0, color: randomColor, mouseX: 500, mouseY: 500, hitCooldowns: []
+            id,
+            pseudo,
+            x: 500,
+            y: 500,
+            radius: 25,
+            score: 0,
+            color: randomColor,
+            mouseX: 500,
+            mouseY: 500,
+            hitCooldowns: []
         };
 
         this.players.set(id, newPlayer);
@@ -77,7 +87,7 @@ export class GameRoom {
         setInterval(() => {
             const playerArray = Array.from(this.players.values());
 
-            // 1. Déplacement vers la souris & Barrière
+            // 1. Déplacement fluide vers la souris & Gestion permissive de la bordure
             playerArray.forEach(p => {
                 p.radius = 25 + Math.floor(p.score / 10);
                 const dx = p.mouseX - p.x;
@@ -88,14 +98,17 @@ export class GameRoom {
 
                 const distFromCenter = Math.sqrt((p.x - this.arenaX) ** 2 + (p.y - this.arenaY) ** 2);
                 const maxDist = this.arenaRadius - p.radius;
-                if (distFromCenter > maxDist) {
+
+                // Permet au joueur d'être poussé légèrement au-delà de la ligne pour déclencher l'éjection client
+                if (distFromCenter >= maxDist - 2) {
                     const angle = Math.atan2(p.y - this.arenaY, p.x - this.arenaX);
-                    p.x = this.arenaX + Math.cos(angle) * maxDist;
-                    p.y = this.arenaY + Math.sin(angle) * maxDist;
+                    // On applique une friction sur la bordure extérieure
+                    p.x = this.arenaX + Math.cos(angle) * (maxDist + 2);
+                    p.y = this.arenaY + Math.sin(angle) * (maxDist + 2);
                 }
             });
 
-            // 2. Gestion des Nuages (DÉGÂTS -50 UNIQUES)
+            // 2. Gestion des Nuages (Dégâts uniques de -50 points par nuage)
             for (let i = this.clouds.length - 1; i >= 0; i--) {
                 const c = this.clouds[i];
                 c.radius += (c.maxRadius - c.radius) * 0.1;
@@ -105,10 +118,9 @@ export class GameRoom {
                     if (p.id !== c.ownerId) {
                         const dist = Math.sqrt((p.x - c.x) ** 2 + (p.y - c.y) ** 2);
                         if (dist < c.radius) {
-                            // On vérifie s'il n'a pas déjà pris les dégâts de CE nuage précis
                             if (!p.hitCooldowns.includes(c.id)) {
                                 p.score = Math.max(0, p.score - 50);
-                                p.hitCooldowns.push(c.id); // On bloque
+                                p.hitCooldowns.push(c.id);
 
                                 const ws = this.connections.get(p.id);
                                 ws?.send(JSON.stringify({ type: 'SCORE_SYNC', score: p.score }));
@@ -118,13 +130,12 @@ export class GameRoom {
                 });
 
                 if (c.opacity <= 0) {
-                    // Nettoyage des cooldowns quand le nuage disparaît
                     playerArray.forEach(p => p.hitCooldowns = p.hitCooldowns.filter(id => id !== c.id));
                     this.clouds.splice(i, 1);
                 }
             }
 
-            // 3. Bousculades d'impact
+            // 3. Chocs physiques et éjections hors-limite
             for (let i = 0; i < playerArray.length; i++) {
                 for (let j = i + 1; j < playerArray.length; j++) {
                     const p1 = playerArray[i];
@@ -137,7 +148,7 @@ export class GameRoom {
 
                     if (dist < minDist) {
                         const angle = Math.atan2(dy, dx);
-                        const pushForce = 15;
+                        const pushForce = 18; // Force de propulsion nécessaire pour franchir la ligne de friction
 
                         p1.x -= Math.cos(angle) * pushForce;
                         p1.y -= Math.sin(angle) * pushForce;
