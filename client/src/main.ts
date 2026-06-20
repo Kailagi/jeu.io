@@ -52,7 +52,8 @@ function setupGame(container: HTMLElement, pseudo: string): void {
     container.appendChild(scoreHUD.getElement());
 
     // 4. Démarrage du moteur de jeu local avec sa jauge
-    const engine = new GameEngine(canvas, pseudo);
+    // Modifie la ligne pour passer l'engine avec les deux UI :
+    const engine = new GameEngine(canvas, pseudo, scoreHUD, leaderboard);
     engine.start();
 
     console.log(`🚀 Fusion réussie ! Tout est synchronisé sur la branche globale.`);
