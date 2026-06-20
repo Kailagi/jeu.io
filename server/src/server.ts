@@ -17,19 +17,22 @@ wss.on('connection', (ws: WebSocket) => {
                     room.join(playerId, ws, data.pseudo || 'Anonyme');
                     break;
                 case 'PLAYER_UPDATE':
-                    // CORRECTIF : On appelle bien la fonction existante dans GameRoom
+                    // On transmet les inputs de souris au gestionnaire
                     room.updatePlayerInput(playerId, data);
                     break;
                 case 'DEPLOY_CLOUD':
                     room.addCloud(playerId, data.x, data.y, data.radius);
                     break;
+                case 'EJECTED':
+                    room.leave(playerId);
+                    break;
             }
         } catch (error) {
-            console.error('⚠️ Erreur paquet:', error);
+            console.error('⚠️ Erreur:', error);
         }
     });
 
     ws.on('close', () => { room.leave(playerId); });
 });
 
-setInterval(() => { room.broadcastState(); }, 45);
+setInterval(() => { room.broadcastState(); }, 30); // Synchro rapide à 33Hz

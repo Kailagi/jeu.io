@@ -36,30 +36,36 @@ export class GameRenderer {
         this.ctx.restore();
     }
 
+    /**
+     * Dessine un joueur (le nôtre ou un adversaire) de manière fluide et synchronisée
+     */
     public drawPlayer(x: number, y: number, radius: number, color: string, pseudo: string): void {
         this.ctx.save();
 
-        // Ombre sous le joueur
-        this.ctx.beginPath();
-        this.ctx.arc(x, y + 4, radius, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'rgba(92, 74, 74, 0.1)';
-        this.ctx.fill();
+        // 1. Positionnement global du contexte
+        this.ctx.translate(x, y);
 
-        // Corps du Pouf
+        // 2. Dessin du corps du Pouf (le cercle)
         this.ctx.beginPath();
-        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+        // CORRECTIF : On dessine bien à (0, 0) car le contexte est déjà translaté
+        this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
         this.ctx.fillStyle = color;
         this.ctx.fill();
-        this.ctx.strokeStyle = '#FFFFFF';
-        this.ctx.lineWidth = 3;
+
+        // Petite ombre douce pour le relief
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
         this.ctx.stroke();
 
-        // Pseudo
+        // 3. Dessin du Pseudo (Texte)
         if (pseudo) {
-            this.ctx.fillStyle = '#5C4A4A';
-            this.ctx.font = 'bold 14px Recursive, sans-serif';
+            this.ctx.fillStyle = '#2D3436'; // Gris foncé pro
+            this.ctx.font = 'bold 14px "Quicksand", sans-serif'; // Police du design
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(pseudo, x, y - radius - 10);
+            this.ctx.textBaseline = 'middle';
+            // CORRECTIF : On dessine le texte à (0, -radius - 15) pour qu'il soit
+            // centré JUSTE AU-DESSUS du Pouf, quelle que soit sa position réelle sur la table.
+            this.ctx.fillText(pseudo, 0, -radius - 15);
         }
 
         this.ctx.restore();

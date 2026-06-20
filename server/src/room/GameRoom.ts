@@ -8,8 +8,8 @@ interface NetworkPlayer {
     radius: number;
     score: number;
     color: string;
-    speedX: number;
-    speedY: number;
+    mouseX: number;
+    mouseY: number;
 }
 
 interface ServerCloud {
@@ -27,8 +27,13 @@ export class GameRoom {
     private connections: Map<string, WebSocket> = new Map();
     private clouds: ServerCloud[] = [];
 
+    // Configuration de la table
+    private arenaX = 500;
+    private arenaY = 500;
+    private arenaRadius = 380;
+
     constructor() {
-        console.log('⚔️ Moteur physique centralisé activé sur le serveur.');
+        console.log('🕹️ Architecture style Agar.io activée.');
         this.startServerPhysicsLoop();
     }
 
@@ -38,7 +43,7 @@ export class GameRoom {
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
         const newPlayer: NetworkPlayer = {
-            id, pseudo, x: 400, y: 400, radius: 25, score: 0, color: randomColor, speedX: 0, speedY: 0
+            id, pseudo, x: 500, y: 500, radius: 25, score: 0, color: randomColor, mouseX: 500, mouseY: 500
         };
 
         this.players.set(id, newPlayer);
@@ -52,51 +57,69 @@ export class GameRoom {
         this.broadcast({ type: 'PLAYER_LEFT', id });
     }
 
-    // Le client envoie ses INPUTS (la vitesse voulue par sa souris) au lieu d'imposer sa position !
+    // Le client envoie UNIQUEMENT la position de sa souris et son score de perles locales
     public updatePlayerInput(id: string, data: any): void {
         const player = this.players.get(id);
         if (player) {
-            player.speedX = data.speedX;
-            player.speedY = data.speedY;
-            player.score = data.score; // On garde la synchro du score des perles locales
+            player.mouseX = data.mouseX;
+            player.mouseY = data.mouseY;
+            if (data.score !== undefined) player.score = data.score;
         }
     }
 
     public addCloud(ownerId: string, x: number, y: number, radius: number): void {
         this.clouds.push({
             id: `cloud_${Math.random().toString(36).substr(2, 9)}`,
-            ownerId, x, y, radius, maxRadius: radius + 150, opacity: 0.6
+            ownerId, x, y, radius, maxRadius: radius + 130, opacity: 0.6
         });
     }
 
-    /**
-     * 🛰️ BOUCLE PHYSIQUE DU SERVEUR (60 FPS)
-     * C'est le serveur qui gère les collisions et les nuages pour TOUT LE MONDE d'un coup !
-     */
+    // BOUCLE PHYSIQUE UNIQUE (Style Agar.io)
     private startServerPhysicsLoop(): void {
         setInterval(() => {
             const playerArray = Array.from(this.players.values());
 
-            // 1. Mise à jour des positions de base des joueurs
+            // 1. Déplacement vers la souris & Barrière
             playerArray.forEach(p => {
-                p.x += p.speedX;
-                p.y += p.speedY;
                 p.radius = 25 + Math.floor(p.score / 10);
+
+                // Calcul du vecteur vers la souris
+                const dx = p.mouseX - p.x;
+                const dy = p.mouseY - p.y;
+
+                // Vitesse proportionnelle à la distance (comme une attraction)
+                p.x += dx * 0.08;
+                p.y += dy * 0.08;
+
+                // Contrainte de la barrière de la table
+                const distFromCenter = Math.sqrt((p.x - this.arenaX) ** 2 + (p.y - this.arenaY) ** 2);
+                const maxDist = this.arenaRadius - p.radius;
+                if (distFromCenter > maxDist) {
+                    const angle = Math.atan2(p.y - this.arenaY, p.x - this.arenaX);
+                    p.x = this.arenaX + Math.cos(angle) * maxDist;
+                    p.y = this.arenaY + Math.sin(angle) * maxDist;
+                }
             });
 
-            // 2. Gestion des Nuages de Poudre (Dégâts & Ralentissements)
+            // 2. Gestion des Nuages (Dégâts instantanés -50)
             for (let i = this.clouds.length - 1; i >= 0; i--) {
                 const c = this.clouds[i];
-                c.radius += (c.maxRadius - c.radius) * 0.05;
-                c.opacity -= 0.008;
+                c.radius += (c.maxRadius - c.radius) * 0.1;
+                c.opacity -= 0.012;
 
-                // Est-ce qu'un joueur touche ce nuage ?
                 playerArray.forEach(p => {
                     if (p.id !== c.ownerId) {
                         const dist = Math.sqrt((p.x - c.x) ** 2 + (p.y - c.y) ** 2);
                         if (dist < c.radius) {
-                            // LE SERVEUR ENLÈVE LES POINTS DIRECTEMENT !
-                            p.score = Math.max(0, p.score - 1); // -1 point par frame dans le nuage
+                            // Le serveur applique la punition directement sur le score maître
+                            const oldScore = p.score;
+                            p.score = Math.max(0, p.score - 50);
+
+                            // Si le score a changé, on envoie un signal flash au client pour mettre à jour son HUD local
+                            if (oldScore !== p.score) {
+                                const ws = this.connections.get(p.id);
+                                ws?.send(JSON.stringify({ type: 'SCORE_SYNC', score: p.score }));
+                            }
                         }
                     }
                 });
@@ -104,7 +127,7 @@ export class GameRoom {
                 if (c.opacity <= 0) this.clouds.splice(i, 1);
             }
 
-            // 3. Gestion des Entre-chocs entre Joueurs (Bousculade)
+            // 3. Bousculades et Collisions d'impact
             for (let i = 0; i < playerArray.length; i++) {
                 for (let j = i + 1; j < playerArray.length; j++) {
                     const p1 = playerArray[i];
@@ -117,13 +140,13 @@ export class GameRoom {
 
                     if (dist < minDist) {
                         const angle = Math.atan2(dy, dx);
-                        const forceRepulsion = 8; // Doux et gérable comme tu préférais !
+                        const pushForce = 15; // Puissance de la bousculade
 
-                        // Le serveur repousse les deux joueurs de force
-                        p1.x -= Math.cos(angle) * (minDist - dist + forceRepulsion);
-                        p1.y -= Math.sin(angle) * (minDist - dist + forceRepulsion);
-                        p2.x += Math.cos(angle) * (minDist - dist + forceRepulsion);
-                        p2.y += Math.sin(angle) * (minDist - dist + forceRepulsion);
+                        // Le serveur éjecte fermement les deux ronds en sens opposé
+                        p1.x -= Math.cos(angle) * pushForce;
+                        p1.y -= Math.sin(angle) * pushForce;
+                        p2.x += Math.cos(angle) * pushForce;
+                        p2.y += Math.sin(angle) * pushForce;
                     }
                 }
             }
